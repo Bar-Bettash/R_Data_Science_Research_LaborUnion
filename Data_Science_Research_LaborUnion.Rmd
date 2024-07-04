@@ -1,0 +1,235 @@
+
+-   Don't forget to install the packages
+-   The packages list is in the code file
+-   Note that some of the packages might not be used in this specific file, but contribute to all of the projects
+
+# Installing the packages
+
+```{r echo=TRUE, message=FALSE}
+library("readxl")
+library(psych)
+library("rio")
+library("tidyverse")
+library("ExcelFunctionsR")
+library('dplyr') # for Frequency Table 
+library(knitr)
+library(plotrix)
+library(ggplot2)
+library(ggpubr)
+library(fixest) # for feols
+library(sampleSelection) # for probit and heckman
+```
+
+-   Don't forget to change the path to yours
+
+# *1: Baseline model estimation using 3 models *
+
+The baseline model estimates the recall rate (has.recall) based on union participation (union.won) 
+using a linear relationship with an error term (u).
+
+Formula: has.recall = β * union.won + u
+
+Note: This model will be estimated three times using different outcome variables:
+has_recall_3yr: Product recall in the last 3 years
+has_recall_2yr: Product recall in the last 2 years
+has_recall_1yr: Product recall in the last 1 year
+
+Model estimation:
+
+```{r}
+path <- "/Users/bar_bettash/Library/Mobile Documents/com~apple~CloudDocs/Bar Bettash RU IDC/Studies/2nd year/Semester 2/Econometrics/Assignments/Assignment 6/union_recalls.RData"
+load(path)
+summary(union.data)
+
+# preparing the needed variables
+union.data$treatment <- union.data$union
+union.data$running <- union.data$pct_vote_union
+cutoff <- 0.5
+union.data$runing_minus_cutoff <- union.data$running - cutoff
+union.data$effect <- union.data$runing_minus_cutoff*union.data$treatment
+
+```
+
+# for now we will not use the running and the cutoff, just copy exactly the model
+
+The results for each of the outcome variables (**`has_recall_1yr`**, **`has_recall_2yr`**, and **`has_recall_3yr`**) show variations in the estimated effect of unionization on product recalls.
+
+```{r}
+
+# model 1 for 1 year
+model1 <- feols(has_recall_1yr ~ union_won, data = union.data, se= 'hetero')
+
+
+summary(model1)
+```
+
+Model 1:
+
+-   Outcome variable: **`has_recall_1yr`**
+
+-   Coefficient of **`union_won`**: -0.021028 (not statistically significant)
+
+```{r}
+# model 2 for 2 years
+model2 <- feols(has_recall_2yr ~ union_won, data = union.data, se= 'hetero')
+
+summary(model2)
+```
+
+Model 2:
+
+-   Outcome variable: **`has_recall_2yr`**
+
+-   Coefficient of **`union_won`**: -0.041824 (not statistically significant at conventional levels)
+
+```{r}
+# model 3 for 3 year
+model3 <- feols(has_recall_3yr ~ union_won, data = union.data, se= 'hetero')
+
+summary(model3)
+```
+
+Model 3:
+
+-   Outcome variable: **`has_recall_3yr`**
+
+-   Coefficient of **`union_won`**: -0.077839 (statistically significant)
+
+The changes in the results can be explained by the time frame considered for the outcome variables and the cumulative nature of product recalls.
+
+In Model 1, the outcome variable captures whether the firm had at least one product recall within the last year. Since unionization might take time to affect product quality and safety, the immediate impact within the first year may not be significant. It's possible that any changes resulting from unionization take longer to manifest and affect the occurrence of product recalls.
+
+In Model 2, the outcome variable extends the time frame to the last two years. By considering a longer period, there is a greater chance of capturing the effects of unionization on product recalls. However, even with this extended time frame, the estimated effect of unionization remains statistically insignificant. This suggests that the impact of unionization on product recalls may take even longer than two years to become apparent.
+
+Model 3 considers the longest time frame of three years. By accounting for a more extended period, it allows for a potentially clearer reflection of the impact of unionization on product recalls. In this model, the coefficient of **`union_won`** is statistically significant and negative, indicating that unionization has a significant negative effect on the cumulative number of product recalls within three years after unionization.
+
+The increasing significance and magnitude of the coefficient as the time frame extends suggests that unionization's effect on product recalls may take time to materialize. It could be attributed to factors such as changes in management practices, adjustments in quality control processes, or improvements in worker satisfaction, which may take time to be influenced by unionization and subsequently impact product recalls.
+
+# *2: Causality*
+
+It's important to consider unobserved factors that might influence both union participation and product recalls. Let's represent such a factor as A.
+
+This unobserved factor (A) could bias the interpretation of β, the coefficient for union participation in the baseline model. For example, if firms with higher inherent recall risk are also more likely to be unionized, 
+β would overestimate the causal effect of unionization on product recalls.
+
+# *2.1: RDD setup*
+
+
+Consider the diagram: union_won -> product_recall, and an unobserved A that affects both union_won, product_recall.
+In the causal diagram, the unobserved variable A represents a common cause or confounding factor that influences both "union won" and "product recall." It could be any factor or set of factors that affects both the likelihood of unionization and the occurrence of product recalls but is not directly measured or included in the analysis.
+
+**An example could be the overall company culture or management practices.** It is possible that firms with certain management practices or company cultures are more likely to experience both unionization and product recalls. For instance, a company with poor quality control practices may have a higher likelihood of product recalls and may also face stronger unionization efforts due to dissatisfaction among workers.
+
+The presence of this unobserved variable A can have implications for the interpretation of beta1, the coefficient of "union won" (treatment) in the baseline model. Without accounting for the influence of the unobserved variable A, the estimated effect of unionization on product recalls may be biased or misleading. The coefficient beta1 represents the average effect of unionization on product recalls, assuming all other factors (including the unobserved variable A) are held constant.
+
+However, if the unobserved variable A is correlated with both unionization and product recalls, omitting it from the analysis can lead to omitted variable bias. The estimated effect of unionization on product recalls may capture not only the direct effect of unionization but also the indirect effect mediated through the unobserved variable A. This can result in an overestimate or underestimate of the true causal effect of unionization on product recalls.
+
+To obtain a more accurate interpretation of beta1 and mitigate the bias from unobserved variables, it is crucial to identify and include relevant control variables that may capture the influence of the unobserved variable A. These control variables should be associated with both unionization and product recalls but are not influenced by the treatment (unionization). By including these controls, we can better isolate the causal effect of unionization on product recalls and improve the validity of the estimated coefficient.
+
+# *2.2.A*
+
+Treatment is the union Running is the pct_vote_union Cutoff is 50%- the majority to get a union
+
+# *2.2.B*
+
+```{r}
+union.data %>%
+  ggplot( aes(x = running, y = treatment)) +
+  geom_point() +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "red") +
+  xlab("Running Variable") +
+  ylab("Treatment Variable")
+```
+
+[**This is a sharp RDD design.**]{.underline}
+
+# *3.A: RDD*
+
+
+Definitions:
+Running Variable: A variable that continuously changes over time and is used to identify the treatment group in a regression discontinuity design (RDD) study.
+Treatment Variable: Indicates whether a firm is unionized (treatment) or not (control).
+Cutoff: A specific value on the running variable that separates the treatment and control groups. Firms with a running variable value above the cutoff are considered treated (unionized), while those below are considered control (non-unionized).
+
+
+The coefficient beta3 measures the treatment effect we are interested in. It represents the causal effect of treatment (unionization) on the outcome variable (product recalls) for observations close to the cutoff point.
+
+In the model, running_minus_cutoff represents the distance from the cutoff point, and treatment is an indicator variable that equals 1 if the observation received the treatment (unionization) and 0 otherwise. The coefficient beta3 captures the change in the treatment effect for a one-unit change in the running_minus_cutoff when the observation is in the treatment group (treatment = 1). It represents the difference in the treatment effect between the treatment group and the control group.
+
+Essentially, beta3 measures the discontinuity in the treatment effect at the cutoff point, allowing us to estimate the causal impact of unionization on product recalls by comparing firms just above and below the cutoff.
+
+# *3.B*
+
+```{r}
+
+
+RDD1 <- feols(has_recall_3yr ~ runing_minus_cutoff + treatment + effect,
+              data = union.data, se= 'hetero')
+
+summary(RDD1)
+```
+
+# *3.C*
+
+```{r}
+data.subset <- union.data %>%filter(abs(runing_minus_cutoff) <= 0.1)
+
+RDD1.subset <- feols(has_recall_3yr ~ runing_minus_cutoff + treatment +effect,
+              data = data.subset, se= 'hetero')
+
+summary(RDD1.subset)
+```
+
+# *3.D*
+
+The decision to use the full bandwidth or a subset depends on the specific research question.
+
+Using the full bandwidth includes a larger number of observations, providing a broader representation of the data. This can be beneficial for obtaining more precise estimates and improving the generalizability of the findings. However, using a wider bandwidth may dilute the treatment effect, making it more challenging to detect significant effects.
+
+On the other hand, using a subset narrows the focus to observations close to the cutoff, which may enhance the identification of the treatment effect. By reducing the bandwidth, you are effectively comparing observations that are more similar in terms of their potential for treatment assignment, which can increase the precision of the estimates. However, using a smaller subset may introduce concerns about the representativeness of the sample and the generalizability of the results to the wider population.
+
+We know that in a situation where we have a linear model before the cutoff and after it, observations that are at the edges might tilt the regression slope a lot.
+
+[**We are interested in what happens around the cutoff so we want to use the narrow bandwidth**]{.underline}
+
+[**so the results won't change too much by observations that are far away from the cutoff.**]{.underline}
+
+Wide bandwidth example:
+
+![](images/paste-D21413FD.png){width="410"}
+
+Narrow bandwidth example:
+
+![](images/paste-706B1316.png){width="410"}
+
+# *4.A: RDD with polynomial*
+
+```{r}
+RDD2.subset <- feols(has_recall_3yr ~ runing_minus_cutoff +runing_minus_cutoff^2 +
+                       treatment + effect + (runing_minus_cutoff^2*treatment),
+                     data = data.subset, se= 'hetero')
+
+summary(RDD2.subset)
+```
+
+RDD2.subset:
+
+-   The coefficient for "runing_minus_cutoff" is estimated as -0.036205, but it is not statistically significant (p-value = 0.99211857). This suggests that the running variable, which determines the treatment (unionization), does not have a significant linear relationship with product recalls.
+
+-   The coefficient for the quadratic term "I(runing_minus_cutoff\^2)" is estimated as -7.536553, but it is also not statistically significant (p-value = 0.82723217). This indicates that the non-linear relationship between the running variable and product recalls is not statistically significant.
+
+-   The coefficient for "treatment" is estimated as 0.000981, and it is not statistically significant (p-value = 0.99571852). This implies that unionization does not have a significant effect on product recalls.
+
+-   The coefficient for "effect" is estimated as -3.891415, but it is not statistically significant (p-value = 0.62248699). This suggests that the additional control variable "effect" does not have a significant effect on product recalls.
+
+-   The coefficient for the interaction term "I(runing_minus_cutoff\^2):treatment" is estimated as 49.919186, but it is also not statistically significant (p-value = 0.49706247). This indicates that the interaction between the quadratic term of the running variable and treatment does not have a significant effect on product recalls.
+
+In summary, based on this model, there is no statistically significant evidence to suggest that unionization has a significant effect on product recalls.
+
+# *4.B*
+
+Comparing the results of RDD1.subset and RDD2.subset, we can observe a significant difference in the estimates for the effect of unionization on product recalls. In RDD1.subset, the coefficient for "treatment" (unionization) is estimated as -0.107091 with a p-value of 0.32550, indicating that unionization has a negative effect on product recalls, but it is not statistically significant at conventional levels. On the other hand, in RDD2.subset, the coefficient for "treatment" is estimated as 0.000981 with a p-value of 0.99571852, suggesting that there is no significant effect of unionization on product recalls.
+
+The discrepancy in the results between RDD1.subset and RDD2.subset might be due to the inclusion of the quadratic term and its interaction with treatment in RDD2.subset. The quadratic term captures the non-linear relationship between the running variable and the outcome, while the interaction term allows for the possibility of a differential treatment effect based on the value of the running variable. However, in this case, both the quadratic term and the interaction term are not statistically significant, indicating that the non-linear relationship and the differential treatment effect do not play a significant role in explaining the effect of unionization on product recalls.
+
+Overall, based on RDD1.subset, there is some indication that unionization has a negative effect on product recalls, although not statistically significant. In RDD2.subset, the evidence for any effect of unionization on product recalls becomes even weaker. Therefore, the answer to the research question "What is the effect of unionization on product recalls?" remains inconclusive and lacks strong empirical support.
