@@ -30,3 +30,11 @@ The primary research question addressed in this study is:
 ### What is the effect of unionization on product recalls? 
 This involves examining how the formation of labor unions influences the occurrence of product recalls over time.
 
+### Preview
+![image](https://github.com/Bar-Bettash/Data_Science_Research_LaborUnion/assets/112887045/7d6da2f2-cebf-4197-98a5-068d6b8c1106)
+---------------------------
+![image](https://github.com/Bar-Bettash/Data_Science_Research_LaborUnion/assets/112887045/43c4f982-4b35-4f36-bc3a-686ef29087a5)
+---------------------------
+![image](https://github.com/Bar-Bettash/Data_Science_Research_LaborUnion/assets/112887045/0b052f8f-88bb-478c-8e91-f863c4207e56)
+
+
